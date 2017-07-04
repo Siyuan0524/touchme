@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+	<title>点点点我</title>
+	<style>
+		*{
+			margin:0;
+			padding:0;
+			list-style-type:none;
+		}
+		/*a,img{border:0;}*/
+		html,body{
+			 width: 100%;
+			 height: 100%;
+		}
+		body{font:12px/180% Arial, Helvetica, sans-serif, "微软雅黑";}
+
+		.main{
+			position:relative;
+			margin:10px auto;
+			max-width:380px;
+			height:600px;
+			border:1px solid #ccc;
+			overflow:hidden;
+		}
+		.ph-main{
+			width: 100%;
+			height: 100%;
+			position: relative;
+			border: none; 
+			margin: auto;
+			overflow: hidden;
+		}
+		.container{
+			position:absolute;
+			top:-150px;
+			width:100%;
+			height:auto;
+		}
+		.row{
+			width:100%;
+			height:150px;
+		}
+		.cell{
+			float:left;
+			width:25%;
+			height:100%;
+			background-color: #fff;
+		}
+		.block{
+			background:#aff;
+			cursor:pointer;
+		}
+		.mark{
+			position: absolute; 
+			width: 40px; 
+			height: 20px; 
+			background-color: #e8e8e8;
+			border-radius: 50%;
+			top: 10px;
+			left: 50%;
+			margin-left: -20px;
+			text-align: center;
+			line-height: 20px;
+			z-index: 1;
+		}
+		.mask , .again-mask{
+			position: absolute;
+			top: 0;left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0,0,0,.3);
+			text-align: center;
+			z-index: 2;
+		}
+		.mask h1 , .again-mask h1{ 
+			color: #fff;
+			height: 50px;
+			line-height: 50px;
+			font-family: '微软雅黑';
+			margin-top: 35%; 
+		}
+		.mask span , .again-mask span{ 
+			display: block; 
+			width: 100px;
+			height: 50px;
+			font-size: 20px; 
+			text-align: center; 
+			line-height: 50px;
+			margin: 50px auto; 
+			background: #4cd964;
+			color: #fff;
+			border-radius: 6px; 
+			cursor: pointer; 
+			-webkit-box-shadow: 1px 1px 1px #999;
+			box-shadow: 1px 1px 1px #999;
+			text-shadow: 1px 1px 1px #fff;
+		}
+		.again-mask h2{ 
+			color: #fff;
+			height: 45px;
+			line-height: 45px;
+			font-family: '微软雅黑';
+		}
+	</style>
+  	<script>
+		function Block( dom ){
+			this.dom = dom; //dom
+			this.parentW = this.dom.parentNode.clientWidth;
+			this.parentH = this.dom.parentNode.clientHeight;
+			this.scale = 1.58; //黑块 宽高比
+			this.h = parseInt(this.parentW/4*this.scale);
+			this.top = -this.h;
+			this.speed = 2; //速度
+			this.maxSpeed = 26; //最大速度
+			this.timer = null; //定时器
+			this.state = true; //游戏判断
+			this.sum = 0; //分数
+		}
+
+		Block.prototype.init = function(){
+
+			var _t = this;
+
+			_t.zsy();
+			_t.mark();
+
+			var clickEvent = "ontouchstart" in document.documentElement ? "touchstart" : "click";
+
+			_t.dom.addEventListener(clickEvent,function(e){
+
+				if(!_t.state){
+					return false;
+				}
+				e = e || window.event;
+				var target = e.target ||e.srcElement;
+				if(target.className.indexOf('block')!=-1){
+					_t.sum++;
+					_t.getEleByClassName("mark")[0].innerHTML = _t.sum;
+					target.className = 'cell';
+				}else{
+					_t.state = false;
+					clearInterval(_t.timer);
+					_t.end();
+					return false;
+				}
+			});
+		}
+
+		//创建一行，，，
+		Block.prototype.addRow = function(){
+
+			var oRow = document.createElement('div');
+			oRow.className = 'row';
+			oRow.style.height = this.h + 'px';
+
+			var cells = ['cell','cell','cell','cell'];
+			var s = Math.floor(Math.random()*4);
+			cells[s] = "cell block";
+			var oCell = null;
+
+			for (var i=0; i<4; i++) {
+				oCell = document.createElement('div');
+				oCell.className = cells[i];
+				oRow.appendChild( oCell );
+			}
+
+			var fChild = this.dom.firstChild;
+			if( fChild == null ){
+				this.dom.appendChild(oRow);
+			}else{
+				this.dom.insertBefore(oRow , fChild);
+			}
+		}
+
+
+		//删除一行，，，
+		Block.prototype.delRow = function(){
+			this.dom.removeChild( this.dom.childNodes[ this.dom.childNodes.length-1 ] );
+		}
+
+
+		//判断什么时候拉回top 什么时候提升速度，，，什么时候停止
+		Block.prototype.judge = function(){
+
+			var _t = this;
+
+			if(_t.top >= 0){
+				_t.top = -this.h;
+				_t.dom.style.top = _t.top +'px';
+				_t.addRow();
+			}
+
+			var rows = _t.getEleByClassName('row','div',_t.dom);
+			for (var i=0; i<rows.length; i++) {
+				if (rows[i].offsetTop >= _t.parentH +_t.h) {
+					_t.delRow();
+				}
+			}
+
+			_t.speed = (parseInt(_t.sum/5)+1)*2; //根据点的白块总数提升速度
+			if( _t.speed >=_t.maxSpeed ){ _t.speed = _t.maxSpeed; } //最大速度 
+
+			var blocks = _t.getEleByClassName('block','div',_t.dom);
+			for (var j=0; j<blocks.length; j++){
+				if ( blocks[j].offsetTop >= _t.parentH ){
+					_t.state = false;
+					clearInterval(_t.timer);
+					_t.end();
+				}
+			}
+		}
+
+		Block.prototype.getEleByClassName =  function(className,tagName,context){
+			context = context || document;
+			tagName = tagName || '*';
+			if(document.getElementsByClassName) {
+				return context.getElementsByClassName(className);
+			} else {
+				var el = new Array();
+				var aEle = context.getElementsByTagName(tagName);
+				var re=new RegExp('\\b'+className+'\\b', 'i');
+				var i=0;
+				for(i=0;i<aEle.length;i++)
+				{
+					if(re.test(aEle[i].className))
+					{
+						aResult.push(aEle[i]);
+					}
+				}
+				return aResult;
+			}
+		}
+
+		//移动
+		Block.prototype.move = function(){
+			this.top += this.speed;
+			this.dom.style.top = this.top +'px';
+		}
+
+		//分数
+		Block.prototype.mark = function(){
+			var oMark = document.createElement("div");
+			oMark.className = "mark";
+			oMark.innerHTML = this.sum;
+			this.dom.parentNode.appendChild(oMark);
+		}
+
+		//元素自适应
+		Block.prototype.zsy = function(){
+			var _t = this;
+			if("ontouchstart" in document.documentElement){
+				_t.dom.parentNode.className = "ph-main";
+			}
+		}
+
+		//游戏开始
+		Block.prototype.start = function(){
+
+			var _t = this;
+
+			for( var i=0; i<4; i++ ){
+				_t.addRow();
+			}
+
+			_t.timer = setInterval(function(){
+				_t.move();
+				_t.judge();
+			},30);
+		}
+
+		//游戏结束  
+		Block.prototype.end = function(){
+			var _t = this;
+
+			if( !document.getElementById("againMask") ){
+				var againMask = document.createElement('div');
+				againMask.className = 'again-mask';
+				againMask.id = 'againMask';
+				againMask.innerHTML =
+				'<h1>Game over</h1><h2 id="againSum">分数：'+_t.sum+'</h2><span id="againStart">重新开始</span>';
+				
+				_t.dom.parentNode.appendChild(againMask);
+			}else{
+				var againMask = document.getElementById("againMask");
+				againMask.style.display = "block";
+				var againSum = document.getElementById("againSum");
+				againSum.innerHTML = "分数："+_t.sum;
+			}
+
+			var againStart = document.getElementById("againStart");
+			againStart.onclick = function(){
+				_t.again();
+				againMask.style.display = "none";
+				return false;
+			}
+		}
+
+		//游戏重来
+		Block.prototype.again = function(){
+			this.parentW = this.dom.parentNode.clientWidth;
+			this.parentH = this.dom.parentNode.clientHeight;
+			this.scale = 1.58; //黑块 宽高比
+			this.h = parseInt(this.parentW/4*this.scale);
+			this.top = -this.h;
+			this.speed = 2; //速度
+			this.timer = null; //定时器
+			this.state = true; //游戏判断
+			this.sum = 0; //分数
+
+
+			var _t = this;
+			_t.dom.innerHTML = "";
+			_t.getEleByClassName('mark','div')[0].innerHTML = _t.sum;
+			_t.start();
+		}
+	</script>	
+</head>
+<body>
+	
+	<div class="main" id="main">
+		<div class="container" id="container">
+		</div>
+		<div class="mask" id="mask">
+			<h1>嘿嘿嘿</h1>
+			<span id="start">START</span>
+		</div>
+	</div>
+
+	<script>
+		var oContainer = document.getElementById('container');
+		var block = new Block(oContainer);
+		block.init();
+
+		var mask = document.getElementById('mask');
+		var start = document.getElementById('start');
+		start.onclick = function(){
+			block.start();
+			mask.style.display = 'none';
+		}
+	</script>
+	<div style="text-align:center;">
+<p><a href="http://www.github.com/idontsy" target="_blank">IDontSY代码</a></p>
+</div>
+</body>
+</html>
